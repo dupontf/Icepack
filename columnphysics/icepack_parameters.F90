@@ -266,6 +266,7 @@
          cp_wv  = 1.81e3_dbl_kind    ,&! specific heat of water vapor (J/kg/K)
          zvir   = 0.606_dbl_kind     ,&! rh2o/rair - 1.0
          zref   = 10._dbl_kind       ,&! reference height for stability (m)
+         zTrf   = c2                 ,&! reference height for {T,Q}ref (m)
          iceruf = 0.0005_dbl_kind    ,&! ice surface roughness (m)
          qqqice = 11637800._dbl_kind ,&! for qsat over ice
          TTTice = 5897.8_dbl_kind    ,&! for qsat over ice
@@ -446,7 +447,7 @@
          stefan_boltzmann_in, ice_ref_salinity_in, &
          Tffresh_in, Lsub_in, Lvap_in, Timelt_in, Tsmelt_in, &
          iceruf_in, Cf_in, Pstar_in, Cstar_in, kappav_in, &
-         kice_in, ksno_in, &
+         kice_in, ksno_in, zTrf_in, &
          zref_in, hs_min_in, snowpatch_in, rhosi_in, sk_l_in, &
          saltmax_in, phi_init_in, min_salin_in, salt_loss_in, &
          Tliquidus_max_in, &
@@ -670,6 +671,7 @@
          cp_wv_in,      & ! specific heat of water vapor (J/kg/K)
          zvir_in,       & ! rh2o/rair - 1.0
          zref_in,       & ! reference height for stability (m)
+         zTrf_in,       & ! reference height for {T,Q}ref (m)
          qqqice_in,     & ! for qsat over ice
          TTTice_in,     & ! for qsat over ice
          qqqocn_in,     & ! for qsat over ocn
@@ -889,6 +891,7 @@
       if (present(kice_in)              ) kice             = kice_in
       if (present(ksno_in)              ) ksno             = ksno_in
       if (present(zref_in)              ) zref             = zref_in
+      if (present(zTrf_in)              ) zTrf             = zTrf_in
       if (present(hs_min_in)            ) hs_min           = hs_min_in
       if (present(snowpatch_in)         ) snowpatch        = snowpatch_in
       if (present(rhosi_in)             ) rhosi            = rhosi_in
@@ -1174,7 +1177,7 @@
          stefan_boltzmann_out, ice_ref_salinity_out, &
          Tffresh_out, Lsub_out, Lvap_out, Timelt_out, Tsmelt_out, &
          iceruf_out, Cf_out, Pstar_out, Cstar_out, kappav_out, &
-         kice_out, ksno_out, &
+         kice_out, ksno_out, zTrf_out, &
          zref_out, hs_min_out, snowpatch_out, rhosi_out, sk_l_out, &
          saltmax_out, phi_init_out, min_salin_out, salt_loss_out, &
          Tliquidus_max_out, &
@@ -1408,6 +1411,7 @@
          cp_wv_out,      & ! specific heat of water vapor (J/kg/K)
          zvir_out,       & ! rh2o/rair - 1.0
          zref_out,       & ! reference height for stability (m)
+         zTrf_out,       & ! reference height for {T,Q}ref (m)
          qqqice_out,     & ! for qsat over ice
          TTTice_out,     & ! for qsat over ice
          qqqocn_out,     & ! for qsat over ocn
@@ -1659,6 +1663,7 @@
       if (present(kice_out)              ) kice_out         = kice
       if (present(ksno_out)              ) ksno_out         = ksno
       if (present(zref_out)              ) zref_out         = zref
+      if (present(zTrf_out)              ) zTrf_out         = zTrf
       if (present(hs_min_out)            ) hs_min_out       = hs_min
       if (present(snowpatch_out)         ) snowpatch_out    = snowpatch
       if (present(rhosi_out)             ) rhosi_out        = rhosi
@@ -1855,6 +1860,7 @@
         write(iounit,*) "  kice       = ",kice
         write(iounit,*) "  ksno       = ",ksno
         write(iounit,*) "  zref       = ",zref
+        write(iounit,*) "  zTrf       = ",zTrf
         write(iounit,*) "  hs_min     = ",hs_min
         write(iounit,*) "  snowpatch  = ",snowpatch
         write(iounit,*) "  rhosi      = ",rhosi
