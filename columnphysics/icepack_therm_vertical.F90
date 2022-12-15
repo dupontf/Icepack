@@ -2356,7 +2356,6 @@
 
       real (kind=dbl_kind) :: &
          worka       , &   ! temporary variables
-         workb       , &
          workc
 
       ! 2D coupler variables (computed for each category, then aggregated)
@@ -2375,6 +2374,8 @@
          Trefn       , & ! air tmp reference level                (K)
          Urefn       , & ! air speed reference level            (m/s)
          Qrefn       , & ! air sp hum reference level         (kg/kg)
+         delq        , & ! humidity difference                (kg/kg)
+         delt        , & ! potential T difference                 (K)
          shcoef      , & ! transfer coefficient for sensible heat
          lhcoef      , & ! transfer coefficient for latent heat
          rfrac           ! water fraction retained for melt ponds
@@ -2553,8 +2554,8 @@
          Urefn  = c0
          lhcoef = c0
          shcoef = c0
-         worka  = c0
-         workb  = c0
+         delt   = c0
+         delq   = c0
 
          fswabsn = c0
          flwoutn = c0
@@ -2585,7 +2586,7 @@
                                         Qa,       rhoa,          &
                                         strairxn, strairyn,      &
                                         Trefn,    Qrefn,         &
-                                        worka,    workb,         &
+                                        delt,     delq,          &
                                         lhcoef,   shcoef,        &
                                         Cdn_atm,                 &
                                         Cdn_atm_ratio_n,         &
