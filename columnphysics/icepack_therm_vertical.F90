@@ -2522,7 +2522,7 @@
       ! Compute lateral and bottom heat fluxes.
       !-----------------------------------------------------------------
 
-      call frzmlt_bottom_lateral (dt,        ncat,      &
+      if (ktherm >= 0) call frzmlt_bottom_lateral (dt,        ncat,      &
                                   nilyr,     nslyr,     &
                                   aice,      frzmlt,    &
                                   vicen,     vsnon,     &
@@ -2628,7 +2628,7 @@
       ! Vertical thermodynamics: Heat conduction, growth and melting.
       !-----------------------------------------------------------------
 
-            if (.not.(calc_Tsfc)) then
+            if (.not.(calc_Tsfc) .and. ktherm >= 0) then
 
                ! If not calculating surface temperature and fluxes, set
                ! surface fluxes (flatn, fsurfn, and fcondtopn) to be used
@@ -2651,7 +2651,7 @@
                smliq(:) = smliqn(:,n)
             endif
 
-            call thermo_vertical(nilyr=nilyr,         nslyr=nslyr,             &
+            if (ktherm >= 0) call thermo_vertical(nilyr=nilyr,         nslyr=nslyr,             &
                                  dt=dt,               aicen=aicen         (n), &
                                  vicen=vicen     (n), vsnon=vsnon         (n), &
                                  Tsf=Tsfc        (n), zSin=zSin         (:,n), &
@@ -2704,7 +2704,7 @@
       ! Aerosol update
       !-----------------------------------------------------------------
 
-            if (tr_aero) then
+            if (tr_aero .and. ktherm >= 0) then
                call update_aerosol (dt,                             &
                                     nilyr, nslyr, n_aero,           &
                                     melttn     (n), meltsn     (n), &
@@ -2719,7 +2719,7 @@
                if (icepack_warnings_aborted(subname)) return
             endif
 
-            if (tr_iso) then
+            if (tr_iso .and. ktherm >= 0) then
                call update_isotope (dt = dt, &
                                     nilyr = nilyr, nslyr = nslyr,          &
                                     meltt = melttn(n),melts = meltsn(n),   &
@@ -2745,7 +2745,7 @@
 
          endif   ! aicen_init
 
-         if (snwgrain) then
+         if (snwgrain .and. ktherm >= 0) then
             call drain_snow (nslyr = nslyr, &
                              vsnon = vsnon(n), &
                              aicen = aicen(n), &
@@ -2762,7 +2762,7 @@
       !-----------------------------------------------------------------
 
          !call ice_timer_start(timer_ponds)
-         if (tr_pond) then
+         if (tr_pond .and. ktherm >= 0) then
 
             if (tr_pond_lvl) then
                rfrac = rfracmin + (rfracmax-rfracmin) * aicen(n)
@@ -2916,7 +2916,7 @@
       ! Calculate ponds from the topographic scheme
       !-----------------------------------------------------------------
       !call ice_timer_start(timer_ponds)
-      if (tr_pond_topo) then
+      if (tr_pond_topo .and. ktherm >=0) then
          call compute_ponds_topo(dt,       ncat,      nilyr,     &
                                  ktherm,                         &
                                  aice,     aicen,                &

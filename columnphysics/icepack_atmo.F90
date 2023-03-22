@@ -65,7 +65,8 @@
                                       uvel,     vvel,     &
                                       Uref,     zlvs      )
 
-      use icepack_parameters, only: highfreq, natmiter, atmiter_conv, zTrf
+      use icepack_parameters, only: highfreq, natmiter, atmiter_conv, zTrf, &
+                                    umin
 
       character (len=3), intent(in) :: &
          sfctype      ! ice or ocean
@@ -116,7 +117,7 @@
          Uref         ! reference height wind speed (m/s)
 
       real (kind=dbl_kind), intent(in), optional :: &
-         zlvs        ! atm level height (scalar quantities) (m)
+         zlvs         ! atm level height (scalar quantities) (m)
 
       ! local variables
 
@@ -134,8 +135,7 @@
          qqq   , & ! for qsat, dqsfcdt
          TTT   , & ! for qsat, dqsfcdt
          qsat  , & ! the saturation humidity of air (kg/m^3)
-         Lheat , & ! Lvap or Lsub, depending on surface type
-         umin      ! minimum wind speed (m/s)
+         Lheat     ! Lvap or Lsub, depending on surface type
 
       real (kind=dbl_kind) :: &
          ustar , & ! ustar (m/s)
@@ -172,8 +172,6 @@
 
       if (highfreq) then
        umin  = p5 ! minumum allowable wind-ice speed difference of 0.5 m/s
-      else
-       umin  = c1 ! minumum allowable wind speed of 1m/s
       endif
 
       Tref = c0
@@ -358,7 +356,11 @@
       ! Compute diagnostics: T, Q (at zTrf), U (at zref)
       !------------------------------------------------------------
 
-      hols  = hols*zTrf/zlvl
+      if (present(zlvs)) then
+         hols  = hols*zTrf/zlvs
+      else
+         hols  = hols*zTrf/zlvl
+      endif
       psix2 = -c5*hols*stable + (c1-stable)*psi_scalar_unstable(hols)
       fac   = (rh/vonkar) &
             * (alzs + al2 - psixh + psix2)
