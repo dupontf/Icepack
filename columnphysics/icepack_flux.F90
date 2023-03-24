@@ -62,6 +62,7 @@
                                congel,  snoice,      &
                                meltsliq, meltsliqn,  &
                                Uref,     Urefn,      &
+                               delq,     delqn,      &
                                Qref_iso, Qrefn_iso,  &
                                fiso_ocn, fiso_ocnn,  &
                                fiso_evap, fiso_evapn)
@@ -85,6 +86,8 @@
           evapin  , & ! evaporation over ice            (kg/m2/s)
           Trefn   , & ! air tmp reference level         (K)
           Qrefn   , & ! air sp hum reference level      (kg/kg)
+          Urefn   , & ! air speed reference level       (m/s)
+          delqn   , & ! humidity difference             (kg/kg)
           freshn  , & ! fresh water flux to ocean       (kg/m2/s)
           fsaltn  , & ! salt flux to ocean              (kg/m2/s)
           fhocnn  , & ! actual ocn/ice heat flx         (W/m**2)
@@ -101,8 +104,7 @@
           fswthrun_vdr, & ! vis dir sw radiation through ice bot    (W/m**2)
           fswthrun_vdf, & ! vis dif sw radiation through ice bot    (W/m**2)
           fswthrun_idr, & ! nir dir sw radiation through ice bot    (W/m**2)
-          fswthrun_idf, & ! nir dif sw radiation through ice bot    (W/m**2)
-          Urefn       ! air speed reference level       (m/s)
+          fswthrun_idf    ! nir dif sw radiation through ice bot    (W/m**2)
 
       ! cumulative fluxes
       real (kind=dbl_kind), intent(inout) :: &
@@ -121,6 +123,8 @@
           evapi   , & ! evaporation over ice            (kg/m2/s)
           Tref    , & ! air tmp reference level         (K)
           Qref    , & ! air sp hum reference level      (kg/kg)
+          Uref    , & ! air speed reference level       (m/s)
+          delq    , & ! humidity difference             (kg/kg)
           fresh   , & ! fresh water flux to ocean       (kg/m2/s)
           fsalt   , & ! salt flux to ocean              (kg/m2/s)
           fhocn   , & ! actual ocn/ice heat flx         (W/m**2)
@@ -139,8 +143,7 @@
           fswthru_idf     ! nir dif sw radiation through ice bot    (W/m**2)
 
       real (kind=dbl_kind), intent(inout), optional :: &
-          dsnow,    & ! change in snow depth            (m)
-          Uref        ! air speed reference level       (m/s)
+          dsnow       ! change in snow depth            (m)
 
       real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
           Qref_iso, & ! isotope air sp hum ref level    (kg/kg)
@@ -180,6 +183,8 @@
       evapi      = evapi    + evapin    * aicen
       Tref       = Tref     + Trefn     * aicen
       Qref       = Qref     + Qrefn     * aicen
+      Uref       = Uref     + Urefn     * aicen
+      delq       = delq     + delqn     * aicen
 
       ! Isotopes
       if (tr_iso) then
@@ -195,10 +200,6 @@
       endif
 
       ! ocean fluxes
-      if (present(Urefn) .and. present(Uref)) then
-         Uref = Uref     + Urefn     * aicen
-      endif
-
       fresh     = fresh     + freshn    * aicen
       fsalt     = fsalt     + fsaltn    * aicen
       fhocn     = fhocn     + fhocnn    * aicen
