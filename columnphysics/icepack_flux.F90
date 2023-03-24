@@ -63,6 +63,7 @@
                                meltsliq, meltsliqn,  &
                                Uref,     Urefn,      &
                                delq,     delqn,      &
+                               ilmo,     ilmon,      &
                                Qref_iso, Qrefn_iso,  &
                                fiso_ocn, fiso_ocnn,  &
                                fiso_evap, fiso_evapn)
@@ -136,11 +137,15 @@
           congel  , & ! congelation ice growth          (m)
           snoice      ! snow-ice growth                 (m)
 
+      real (kind=dbl_kind), intent(in), optional :: &
+          ilmon           ! inverse Obukov lengthscale              (1/m)
+
       real (kind=dbl_kind), intent(inout), optional :: &
           fswthru_vdr , & ! vis dir sw radiation through ice bot    (W/m**2)
           fswthru_vdf , & ! vis dif sw radiation through ice bot    (W/m**2)
           fswthru_idr , & ! nir dir sw radiation through ice bot    (W/m**2)
-          fswthru_idf     ! nir dif sw radiation through ice bot    (W/m**2)
+          fswthru_idf , & ! nir dif sw radiation through ice bot    (W/m**2)
+          ilmo            ! inverse Obukov lengthscale              (1/m)
 
       real (kind=dbl_kind), intent(inout), optional :: &
           dsnow       ! change in snow depth            (m)
@@ -185,6 +190,9 @@
       Qref       = Qref     + Qrefn     * aicen
       Uref       = Uref     + Urefn     * aicen
       delq       = delq     + delqn     * aicen
+
+      if (present(ilmo) .and. present(ilmon)) &
+         ilmo    = ilmo     + ilmon     * aicen
 
       ! Isotopes
       if (tr_iso) then
