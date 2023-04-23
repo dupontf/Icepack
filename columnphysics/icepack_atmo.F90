@@ -160,7 +160,8 @@
          cp    , & ! specific heat of moist air
          holm  , & ! H (at zlvl  ) over L
          hols  , & ! H (at zlvs  ) over L (if zlvs present)
-         stable, & ! stability factor
+         stablem, & ! stability factor (momentum)
+         stables, & ! stability factor (scalars)
          cpvir , & ! defined as cp_wv/cp_air - 1.
          psixh     ! stability function at zlvl (at zlvs if present) (heat and water)
 
@@ -283,8 +284,8 @@
             hols = holm
          endif
 
-         call compute_stability_function('momentum', holm, stable, psimh)
-         call compute_stability_function('scalar'  , hols, stable, psixh)
+         call compute_stability_function('momentum', holm, stablem, psimh)
+         call compute_stability_function('scalar'  , hols, stables, psixh)
 
          ! shift all coeffs to measurement height and stability
          rd = rdn / (c1+rdn/vonkar*(alzm-psimh))
@@ -367,7 +368,7 @@
       else
          hols  = hols*zTrf/zlvl
       endif
-      psix2 = -c5*hols*stable + (c1-stable)*psi_scalar_unstable(hols)
+      psix2 = -c5*hols*stables + (c1-stables)*psi_scalar_unstable(hols)
       fac   = (rh/vonkar) &
             * (alzs + al2 - psixh + psix2)
       Tref  = potT - delt*fac
