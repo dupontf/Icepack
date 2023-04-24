@@ -2381,8 +2381,7 @@
          Urefn       , & ! air speed reference level            (m/s)
          Qrefn       , & ! air sp hum reference level         (kg/kg)
          Qsurn       , & ! surface specific humidity          (kg/kg)
-         delqn       , & ! humidity difference (per category) (kg/kg)
-         delq        , & ! humidity difference (aggregated)   (kg/kg)
+         delq        , & ! humidity difference                (kg/kg)
          delt        , & ! potential T difference                 (K)
          shcoef      , & ! transfer coefficient for sensible heat
          lhcoef      , & ! transfer coefficient for latent heat
@@ -2477,7 +2476,6 @@
       massicen(:,:) = c0
       massliqn(:,:) = c0
 
-      delq   = c0
       if(present(Qsur)) Qsur = c0
       if(present(ilmo)) ilmo = c0
 
@@ -2567,7 +2565,7 @@
          lhcoef = c0
          shcoef = c0
          delt   = c0
-         delqn  = c0
+         delq   = c0
          Qsurn  = c0
          ilmon  = c0
 
@@ -2600,7 +2598,7 @@
                                         Qa,       rhoa,          &
                                         strairxn, strairyn,      &
                                         Trefn,    Qrefn,         &
-                                        delt,     delqn,         &
+                                        delt,     delq,          &
                                         lhcoef,   shcoef,        &
                                         Cdn_atm,                 &
                                         Cdn_atm_ratio_n,         &
@@ -2612,7 +2610,7 @@
                if (icepack_warnings_aborted(subname)) return
 
                ! Compute surface specific humidity
-               Qsurn = Qa - delqn
+               Qsurn = Qa - delq
 
             endif   ! calc_Tsfc or calc_strair
 
