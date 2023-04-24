@@ -374,7 +374,20 @@
 
         else
 
+#ifndef CICE_IN_NEMO
            Tmlt = -depressT * Sin
+#else
+           if     (trim(tfrz_option) == 'constant') then
+              Tmlt = Tocnfrz
+           elseif (trim(tfrz_option) == 'nonlin')   then
+              ! this causes circular dependencies, so the computation is copied here
+              ! call eos_fzp(Sin, Tmlt)
+              Tmlt = ( - 0.0575_dbl_kind + 1.710523e-3_dbl_kind * sqrt( Sin )   &
+                       - 2.154996e-4_dbl_kind * Sin ) * Sin
+           else ! 'linear_salt'
+              Tmlt = -depressT * Sin
+           endif
+#endif
 
         endif
 
