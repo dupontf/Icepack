@@ -63,7 +63,8 @@
                                       Cdn_atm_ratio_n,    &
                                       Qa_iso,   Qref_iso, &
                                       uvel,     vvel,     &
-                                      Uref,     zlvs      )
+                                      Uref,     zlvs,     &
+                                      ilmo      )
 
       use icepack_parameters, only: highfreq, natmiter, atmiter_conv, zTrf, &
                                     umin
@@ -118,6 +119,9 @@
 
       real (kind=dbl_kind), intent(in), optional :: &
          zlvs         ! atm level height (scalar quantities) (m)
+
+      real (kind=dbl_kind), intent(out), optional :: &
+         ilmo         ! inverse Obukhov length scale (1/m)
 
       ! local variables
 
@@ -269,6 +273,8 @@
          holm = compute_stability_parameter(zlvl , thva , &
                                            ustar, tstar, &
                                            qstar, Qa)
+         if (present(ilmo)) ilmo = holm / zlvl
+
          if (present(zlvs)) then
             hols = compute_stability_parameter(zlvs , thva , &
                                                ustar, tstar, &
@@ -841,7 +847,8 @@
                                      Cdn_atm_ratio_n,            &
                                      Qa_iso,      Qref_iso,      &
                                      uvel,        vvel,          &
-                                     Uref,        zlvs)
+                                     Uref,        zlvs,          &
+                                     ilmo         )
 
       character (len=3), intent(in) :: &
          sfctype      ! ice or ocean
@@ -884,7 +891,8 @@
          zlvs         ! atm level height for scalars (if different than zlvl) (m)
 
       real (kind=dbl_kind), intent(out), optional :: &
-         Uref         ! reference height wind speed (m/s)
+         Uref     , & ! reference height wind speed (m/s)
+         ilmo         ! inverse Obukhov lengthscale (1/m)
 
 !autodocument_end
 
@@ -953,7 +961,8 @@
                                    Qa_iso=Qa_iso,           &
                                    Qref_iso=Qref_iso,       &
                                    uvel=l_uvel, vvel=l_vvel,&
-                                   Uref=l_Uref, zlvs=zlvs   )
+                                   Uref=l_Uref, zlvs=zlvs,  &
+                                   ilmo=ilmo)
          if (icepack_warnings_aborted(subname)) return
       endif ! atmbndy
 
