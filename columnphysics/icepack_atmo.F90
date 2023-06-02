@@ -135,6 +135,7 @@
          fac   , & ! interpolation factor
          al2   , & ! ln(z10   /zTrf)
          psix2 , & ! stability function at zTrf   (heat and water)
+         psim10, & ! stability function at zref   (momentum)
          ssq   , & ! sat surface humidity     (kg/kg)
          qqq   , & ! for qsat, dqsfcdt
          TTT   , & ! for qsat, dqsfcdt
@@ -160,7 +161,8 @@
          cp    , & ! specific heat of moist air
          holm  , & ! H (at zlvl  ) over L
          hols  , & ! H (at zlvs  ) over L (if zlvs present)
-         stable, & ! stability factor
+         stablem, & ! stability factor (momentum)
+         stables, & ! stability factor (scalars)
          cpvir , & ! defined as cp_wv/cp_air - 1.
          psixh     ! stability function at zlvl (at zlvs if present) (heat and water)
 
@@ -283,8 +285,8 @@
             hols = holm
          endif
 
-         call compute_stability_function('momentum', holm, stable, psimh)
-         call compute_stability_function('scalar'  , hols, stable, psixh)
+         call compute_stability_function('momentum', holm, stablem, psimh)
+         call compute_stability_function('scalar'  , hols, stables, psixh)
 
          ! shift all coeffs to measurement height and stability
          rd = rdn / (c1+rdn/vonkar*(alzm-psimh))
@@ -367,7 +369,7 @@
       else
          hols  = hols*zTrf/zlvl
       endif
-      psix2 = -c5*hols*stable + (c1-stable)*psi_scalar_unstable(hols)
+      psix2 = psi_stable_jordan(hols)*stables + (c1-stables)*psi_scalar_unstable(hols)
       fac   = (rh/vonkar) &
             * (alzs + al2 - psixh + psix2)
       Tref  = potT - delt*fac
@@ -380,6 +382,14 @@
          Uref = sqrt((uatm-uvel)**2 + (vatm-vvel)**2) * rd / rdn
       else
          Uref = vmag * rd / rdn
+         
+         ! compute Uref as in CICE4-CMC
+         holm     = holm*zref/zlvl
+         psim10   = psi_stable_jordan(holm)*stablem + (c1-stablem)*psi_momentum_unstable(holm)
+         fac      = (rd/vonkar) &
+                  * (alzm - psimh + psim10)
+         !Note al10=log(zref/zref)=0
+         Uref     = max( vmag - vmag*fac , c0 )
       endif
 
       if (tr_iso .and. sfctype(1:3)=='ice') then
@@ -1028,9 +1038,7 @@
 
       stable = p5 + sign(p5 , hol)
 
-      psi_stable = -(0.7_dbl_kind*hol &
-                 + 0.75_dbl_kind*(hol-14.3_dbl_kind) &
-                 * exp(-0.35_dbl_kind*hol) + 10.7_dbl_kind)
+      psi_stable = psi_stable_jordan(hol)
 
       if(trim(qty) == 'momentum') then
          psi_unstable = psi_momentum_unstable(hol)
@@ -1077,6 +1085,18 @@
       psi_scalar_unstable =  c2 * log((c1 + xd*xd)/c2)
 
       end function psi_scalar_unstable
+
+!=======================================================================
+
+      real(kind=dbl_kind) function psi_stable_jordan(hol) result(psi_stable)
+
+      real(kind=dbl_kind), intent(in) :: hol
+
+      psi_stable = -(0.7_dbl_kind*hol &
+                 + 0.75_dbl_kind*(hol-14.3_dbl_kind) &
+                 * exp(-0.35_dbl_kind*hol) + 10.7_dbl_kind)
+
+      end function psi_stable_jordan
 
 !=======================================================================
 
