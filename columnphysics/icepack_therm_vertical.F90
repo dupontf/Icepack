@@ -27,6 +27,7 @@
       use icepack_parameters, only: ustar_min, fbot_xfer_type, formdrag, calc_strair
       use icepack_parameters, only: rfracmin, rfracmax, dpscale, frzpnd, snwgrain, snwlvlfac
       use icepack_parameters, only: phi_i_mushy, floeshape, floediam, use_smliq_pnd, snwredist
+      use icepack_parameters, only: ferrmax
       use icepack_parameters, only: saltflux_option
       use icepack_parameters, only: icepack_chkoptargflag
 
@@ -34,7 +35,7 @@
       use icepack_tracers, only: tr_pond_lvl, tr_pond_topo
       use icepack_tracers, only: n_aero, n_iso
 
-      use icepack_therm_shared, only: ferrmax, l_brine
+      use icepack_therm_shared, only: l_brine
       use icepack_therm_shared, only: calculate_tin_from_qin, Tmin
       use icepack_therm_shared, only: adjust_enthalpy
       use icepack_therm_bl99,   only: temperature_changes
