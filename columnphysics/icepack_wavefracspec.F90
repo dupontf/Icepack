@@ -29,8 +29,8 @@
       module icepack_wavefracspec
 
       use icepack_kinds
-      use icepack_parameters, only: p01, p5, c0, c1, c2, c3, c4, c10
-      use icepack_parameters, only: bignum, puny, gravit, pi
+      use icepack_parameters, only: p001, p01, p25, p5, c0, c1, c2, c3, c4, c10
+      use icepack_parameters, only: bignum, puny, gravit, pi, rhoi, rhow
       use icepack_tracers, only: nt_fsd
       use icepack_warnings, only: warnstr, icepack_warnings_add,  icepack_warnings_aborted
       use icepack_fsd
@@ -42,6 +42,8 @@
       real (kind=dbl_kind), parameter  :: &
          swh_minval = 0.01_dbl_kind,  & ! minimum value of wave height (m)
          straincrit = 3.e-5_dbl_kind, & ! critical strain
+         facorb     = 1.e2_dbl_kind,  & ! Kv * epsilon * k' / deltamin
+                                        ! m2/s * 1/m * s =  m ~ 10^-2 * 10^-5 *1 / 10^-9 = 10^2
          D          = 1.e4_dbl_kind,  & ! domain size
          dx         = c1,             & ! domain spacing
          threshold  = c10               ! peak-finding threshold -
@@ -718,7 +720,281 @@
       end subroutine get_fraclengths
 
 !=======================================================================
+!autodocument_start icepack_step_wavefracture_BD
+! 
+!  Given fracture histogram computed from local wave spectrum, evolve 
+!  the floe size distribution
+!
+!  authors: 2026 F. Dupont from WIM Baudry/Dumont ISMER using G factor from Boutin et al. (2018)
+!
+      subroutine icepack_step_wavefracture_BD(wave_spec_type,&
+                  dt,            ncat,            nfsd,      &
+                  nfreq,                                     &
+                  tarea,         aicen,           vicen,     &
+                  floe_rad_l,    floe_rad_c,                 &
+                  wave_spectrum, wavefreq,        dwavefreq, &
+                  trcrn,         d_afsd_wave,                &
+                  istep,         ip, jp,          task)
 
+
+      character (len=char_len), intent(in) :: &
+         wave_spec_type   ! type of wave spectrum forcing
+
+      integer (kind=int_kind), intent(in) :: &
+         nfreq,        & ! number of wave frequency categories
+         ncat,         & ! number of thickness categories
+         nfsd            ! number of floe size categories
+
+      real (kind=dbl_kind), intent(in) :: &
+         dt,           & ! time step
+         tarea           ! surface area gridcell
+
+      real (kind=dbl_kind), dimension(ncat), intent(in) :: &
+         vicen,        & ! ice volume fraction (categories)
+         aicen           ! ice area fraction (categories)
+
+      real(kind=dbl_kind), dimension(:), intent(in) ::  &
+         floe_rad_l,   & ! fsd size lower bound in m (radius)
+         floe_rad_c      ! fsd size bin centre in m (radius)
+
+      real (kind=dbl_kind), dimension (:), intent(in) :: &
+         wavefreq,     & ! wave frequencies (s^-1)
+         dwavefreq       ! wave frequency bin widths (s^-1)
+
+      real (kind=dbl_kind), dimension(:), intent(in) :: &
+         wave_spectrum   ! ocean surface wave spectrum as a function of frequency
+                         ! power spectral density of surface elevation, E(f) (units m^2 s)
+
+      real (kind=dbl_kind), dimension(:,:), intent(inout) :: &
+         trcrn           ! tracer array
+
+      real (kind=dbl_kind), dimension(nfsd), intent(out) :: &
+         d_afsd_wave     ! change in fsd due to waves
+
+      integer, intent(in) :: istep, ip, jp, task
+
+!autodocument_end
+      ! local variables
+      integer (kind=int_kind) :: &  
+         n, k, t, &
+         k1, k2, k3,    & ! FSD category index
+         nsubt ! number of subcycles 
+
+      real (kind=dbl_kind), dimension(nfsd,ncat) :: &
+         afsdn            ! floe size and thickness distribution
+
+      real (kind=dbl_kind), dimension (nfsd, nfsd) :: &
+         beta             ! the redistributor
+
+      real (kind=dbl_kind) :: &
+         hbar         , & ! mean ice thickness
+         elapsed_t    , & ! elapsed subcycling time
+         subdt        , & ! subcycling time step
+         cons_error   , & ! area conservation error
+         const1       , & ! const for beta
+         const2       , & ! const for beta
+         m0           , & ! zero moment of the wave spectra
+         m2           , & ! second moment of the wave spectra
+         m0s          , & ! zero moment of the wave spectra
+         Estrain      , & ! significant strain
+         Estrain_c    , & ! critical significant strain
+         Lpeak        , & ! peak wavelength
+         Tpeak2       , & ! peak period squared
+         Cg_peak      , & ! peak group velocity
+         Rmin         , & ! minimum floe size for strain criteria application
+         Dbet         , & ! lengthscale used in Gaussian for beta2
+         orbcrit      , & ! orbital velocity criterium
+         cwave    = 0.8_dbl_kind    , & ! maximum partion of ice participating wave breaking (Yang et al., 2024)
+                                        ! or 0.9 from probability "f" in Eq.13 of Dumont et al. (2011)
+         afloe    = 1.0_dbl_kind    , & ! exponential parameter for wave breaking
+         Young    = 5.49e9_dbl_kind , & ! Young's modulus (Pa)
+         Poisson  = 0.3_dbl_kind    , & ! Poisson ratio
+         P_c      = 0.14_dbl_kind       ! critical probability for breakup
+
+      real (kind=dbl_kind), dimension (nfsd) :: &
+         afsd_init    , & ! tracer array
+         afsd_tmp     , & ! tracer array
+         d_afsd_tmp   , & ! change
+         Pf           , & ! probability of breaking a specific floe category
+         qn               ! probability of breaking floe in FSD
+
+      real(kind=dbl_kind), dimension (nfreq) :: &
+         kice         , & ! wave number [in ice?]
+         Lice         , & ! wavelength [in ice?]
+         Gice             ! correction factor for ice dissipation of energy
+      real(kind=dbl_kind), dimension (nfsd) :: &
+         Xgauss       , & ! vector argument for gaussian
+         Loss         , & ! afstd loss
+         Gain         , & ! afstd gain
+         Gain2            ! afstd extra gain
+
+      character(len=*),parameter :: &
+         subname='(icepack_step_wavefracture)'
+
+      !------------------------------------
+
+      ! initialize 
+      d_afsd_wave    (:)   = c0
+
+      ! calculate zeroth and second moment of wave spectrum
+      m0 = SUM(wave_spectrum(:) * dwavefreq(:))
+      m2 = SUM(wave_spectrum(:) * (c2*pi*wavefreq(:))**2 * dwavefreq(:))
+      ! from which peak period and wavelength can be obtained
+      if ( m2 > puny ) then
+         Tpeak2 = (c2 * pi)**2 * m0 / m2
+         Lpeak  = gravit / (c2*pi) * Tpeak2
+         Cg_peak = p5 * Lpeak / sqrt(Tpeak2)
+      else
+         Cg_peak = c1
+      endif
+
+
+      ! if all ice is not in first floe size category and wave spectrum above zero
+      if (.NOT. ALL(trcrn(nt_fsd,:).ge.c1-puny) .and. m0 > puny ) then
+
+         do n = 1, ncat
+
+           ! category-dependent mean ice thickness
+           hbar = vicen(n)/(aicen(n)+1e-14_dbl_kind)
+
+           ! do not try to fracture for minimal ice concentration ! FD shall we move that threshold down?
+           if (aicen(n) > 1.0e-4_dbl_kind .AND. hbar > p001 ) then
+
+              ! wavenumber taken from w^2=gk, but can be modified for presence of sea ice or depth
+              kice(:) = (c2 * pi * wavefreq(:))**2 / gravit
+              Lice(:) =  c2 * pi / kice(:)
+              Rmin = pi*p25*p5*( ( Young * hbar**3 ) / ( c3 * rhoi * gravit * ( c1-Poisson**2 )) )**p25
+
+              ! Gice is the "G" parameter in Boutin et al. (2018)
+              Gice(:) = c1 + ( Young * kice(:)**4 * hbar**3 ) / ( c4*c3 * gravit * rhow * ( c1-Poisson**2) )
+
+              k1 = nfreq
+              k2 = nfreq
+
+              Pf(:) = c0 ! initialize to zero
+
+              do k = 1, nfsd
+
+                 do while( Lice(k1) < c4 * floe_rad_c(k) .and. k1 > 1 )
+                    k1 = k1 - 1
+                 enddo
+
+                 ! calculate the zeroth moment of wave related strain
+                 m0s = hbar**2 * p25 * SUM( wave_spectrum(k1:k2) * kice(k1:k2)**4 / Gice(k1:k2) * dwavefreq(k1:k2) )
+                 Estrain = c2 * sqrt(m0s)
+                 Estrain_c = straincrit * sqrt( - c2 / log( P_c ) )
+
+                 ! orbital failure (mostly for thin ice plate failure)
+                 ! eta0 * kice / hi * Kv * epsilon * k' / deltamin
+                 ! facorb = Kv * epsilon * k' / deltamin ( units of meters)
+                 m0 = SUM( wave_spectrum(k1:k2) * kice(k1:k2)**2 / Gice(k1:k2) * dwavefreq(k1:k2) )
+                 orbcrit = c4 * sqrt( m0 ) / hbar * facorb
+
+                 if ( floe_rad_c(k) >= Rmin .and. Estrain > 1.e-10_dbl_kind ) then
+                    Pf(k) = exp( - c2 * straincrit**2 / Estrain**2 )
+                 end if
+
+                 if ( floe_rad_c(k) >= Rmin .and. orbcrit > 1.0_dbl_kind ) then
+                    Pf(k) = c1
+                 end if
+
+                 if ( Pf(k) < P_c ) then
+                    Pf(k) = c0
+                 end if
+
+                 k2=k1
+
+              enddo ! k = 1, nfsd
+
+                 ! Deal with possibility that category 1 can be breaking, although it is not allowed.
+                 if ( Pf(1) > c0 ) then
+                    Pf(2) = Pf(2) + Pf(1)
+                    Pf(1) = c0
+                 endif
+
+                 qn(:) = c0 ! initialize to zero
+
+                 ! qn is the cumulative probability derived from Pf
+                 Pf(:)    = Pf(:) / SUM( Pf(:) + 3e-14_dbl_kind ) ! Pf is normalized
+                 do k = 2, nfsd
+                    qn(k) = SUM( Pf(1:k) )
+                 enddo
+
+                 ! initialize the FSD
+                 afsd_init(:) = trcrn(nt_fsd:nt_fsd+nfsd-1,n)
+
+                 ! first beta matrix
+                 beta(:,:) = c0
+                 do k = 2, nfsd
+                    beta(1:k-1,k) = Pf(2:k) / SUM( Pf(2:k) + 3e-14_dbl_kind )
+                 enddo
+
+                 ! Compute Loss and Gain
+                 Loss = afsd_init(:) * qn(:)
+                 do k = 1, nfsd
+                    Gain(k) = sum(beta(k,:)*Loss)
+                 enddo
+
+                 ! second beta matrix
+                 beta(:,:) = c0
+                 do k = 1, nfsd
+                    Dbet = 0.16_dbl_kind * abs( Rmin - floe_rad_c(k) ) ! Baudry and Dumont use diameter instead of radius, but ratio here so no problem
+                    Xgauss(1:k-1) = ( floe_rad_c(1:k-1) - floe_rad_c(k) * p5 ) / ( sqrt(c2) * Dbet ) ! same thing here
+
+                    where ( floe_rad_c(1:k-1) >= Rmin ) &
+                       beta(1:k-1,k) = exp( - Xgauss(1:k-1)**2 ) ! centered on flow_rad_c(k) * p5, means that the mode =lambda/4
+
+                    ! normalize
+                    if ( SUM(beta(:,k)) > c0 ) then
+                        beta(:,k)=beta(:,k) / SUM(beta(:,k))
+                    else
+                        beta(k,k) = c1
+                    endif
+                 enddo
+
+                 ! Compute extra Gain
+                 do k = 1, nfsd
+                    Gain2(k) = SUM( beta(k,:)*Gain(:) )
+                 enddo
+
+                 ! total tendency
+                 d_afsd_tmp(:) = Gain2(:) - Loss(:)
+
+                 ! update afsd
+                 subdt = MIN(c1, Cg_peak * dt / sqrt(tarea) ) ! non-dimensional portion of the grid cell that the waves are breaking
+                 afsd_tmp(:) = afsd_init(:) + subdt * d_afsd_tmp(:)
+
+                 ! check conservation and negatives
+                 if (MINVAL(afsd_tmp) < -puny) then
+                    write(warnstr,*) subname, 'wb, <0',istep,n,ip,jp,task
+                    call icepack_warnings_add(warnstr)
+                 endif
+                 if (MAXVAL(afsd_tmp) > c1+puny) then
+                    write(warnstr,*) subname, 'wb, >1',istep,n,ip,jp,task
+                    call icepack_warnings_add(warnstr)
+                 endif
+
+                 cons_error = SUM(afsd_tmp) - c1
+                 if ( abs(cons_error) > puny ) then
+                    write(warnstr,*) subname, 'FSD /=1',cons_error,istep,n,ip,jp,task
+                    call icepack_warnings_add(warnstr)
+                 endif
+
+                  ! update trcrn
+                  trcrn(nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp/SUM(afsd_tmp)
+                  call icepack_cleanup_fsd (ncat, nfsd, trcrn(nt_fsd:nt_fsd+nfsd-1,:) )
+                  if (icepack_warnings_aborted(subname)) return
+
+                  ! for diagnostics
+                  d_afsd_wave (:)   = d_afsd_wave(:) + aicen(n) * d_afsd_tmp(:)
+            endif ! aicen > p001
+         enddo    ! n
+      endif ! if all ice is not in first floe size category and wave spectrum above zero
+
+      end subroutine icepack_step_wavefracture_BD
+
+!=======================================================================
+     
       end module icepack_wavefracspec
 
 !=======================================================================
