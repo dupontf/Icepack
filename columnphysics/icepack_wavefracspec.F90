@@ -37,7 +37,7 @@
 
       implicit none
       private
-      public :: icepack_init_wave, icepack_step_wavefracture
+      public :: icepack_init_wave, icepack_step_wavefracture, icepack_step_wavefracture_BD
 
       real (kind=dbl_kind), parameter  :: &
          swh_minval = 0.01_dbl_kind,  & ! minimum value of wave height (m)
