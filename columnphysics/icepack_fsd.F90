@@ -53,7 +53,8 @@
 
       private
       public :: icepack_init_fsd_bounds, icepack_init_fsd, icepack_cleanup_fsd, &
-         fsd_lateral_growth, fsd_add_new_ice, fsd_weld_thermo, get_subdt_fsd
+         fsd_lateral_growth, fsd_add_new_ice, fsd_weld_thermo, get_subdt_fsd, &
+         icepack_fsd_mean_size, icepack_fsd_strength_contribution
 
       real(kind=dbl_kind), dimension(:), allocatable ::  &
          floe_rad_h,         & ! fsd size higher bound in m (radius)
@@ -1067,6 +1068,75 @@
       subdt = MINVAL(check_dt)
 
       end function get_subdt_fsd
+
+!=======================================================================
+!
+!  Given FSD distribution calculates a mean size of floe
+!
+!  authors: F Dupont
+!
+      subroutine icepack_fsd_mean_size( ncat, nfsd, trcrn, aicen, mean_size )
+
+      integer (kind=int_kind), intent(in) :: &
+         ncat       ,  & ! number of thickness categories
+         nfsd            ! number of floe size categories
+
+      real (kind=dbl_kind), dimension (:,:), intent(in) :: &
+         trcrn           ! ice tracers
+
+      real (kind=dbl_kind), dimension (:), intent(in) :: &
+         aicen           ! ice concentration per ITD category
+
+      real (kind=dbl_kind), intent(out) :: &
+         mean_size       ! mean floe size given FSD
+
+      ! local variables
+      integer (kind=int_kind) :: &
+        n                ! thickness category index
+
+      real (kind=dbl_kind), dimension(nfsd)  :: &
+         afsd            ! local FSD (sum=1)
+
+      real (kind=dbl_kind)  :: &
+         meanrad, &      ! mean size for each ITD category
+         aice            ! total ice concentration
+
+      mean_size = c0
+
+      do n = 1, ncat
+         afsd(:) = trcrn(nt_fsd:nt_fsd+nfsd-1,n)
+         meanrad = SUM( afsd * floe_area_c )
+         mean_size = mean_size + meanrad * aicen(n)
+      end do
+
+      ! finalize the mean size value
+      aice = SUM( aicen )
+      if ( aice > c0 ) then
+         mean_size = mean_size / aice
+      endif
+
+      end subroutine icepack_fsd_mean_size
+
+!=======================================================================
+!
+!  Given mean size of floe, calculation a derivable strength diminishing contribution
+!
+!  authors: F. Dupont adapted from V. Denarie (ISMER)
+!
+      subroutine icepack_fsd_strength_contribution( mean_size, vice, floestrengthfrac )
+
+      real (kind=dbl_kind), intent(in) :: &
+         mean_size, &    ! mean floe size given AFSTD
+         vice            ! mean ice volume
+
+      real (kind=dbl_kind), intent(out) :: &
+         floestrengthfrac! strength diminishing contribution from FSD
+
+      floestrengthfrac = c1 ! default is no dimnishing factor
+      if (mean_size > 0.) &
+         floestrengthfrac = tanh( 0.01_dbl_kind * mean_size )
+
+      end subroutine icepack_fsd_strength_contribution
 
 
 !=======================================================================

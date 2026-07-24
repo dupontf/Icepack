@@ -1600,7 +1600,7 @@
                                       aice,     vice,     &
                                       aice0,    aicen,    &
                                       vicen,    &
-                                      strength)
+                                      strength, floefrac )
 
       integer (kind=int_kind), intent(in) :: &
          ncat       ! number of thickness categories
@@ -1609,6 +1609,9 @@
          aice   , & ! concentration of ice
          vice   , & ! volume per unit area of ice  (m)
          aice0      ! concentration of open water
+
+      real (kind=dbl_kind), optional, intent(in) :: &
+         floefrac   ! strength diminishing factor due to floe size distribution (1)
 
       real (kind=dbl_kind), dimension(:), intent(in) :: &
          aicen  , & ! concentration of ice
@@ -1709,6 +1712,12 @@
          strength = Pstar*vice*exp(-Cstar*(c1-aice))
 
       endif                     ! kstrength
+
+      !-----------------------------------------------------------------
+      ! Add floe-size related diminishing factor to sea ice strength
+      !-----------------------------------------------------------------
+
+      if (present(floefrac)) strength = strength * floefrac
 
       end subroutine icepack_ice_strength
 

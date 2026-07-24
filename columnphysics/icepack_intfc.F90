@@ -77,6 +77,8 @@
       use icepack_fsd, only: icepack_init_fsd_bounds
       use icepack_fsd, only: icepack_init_fsd
       use icepack_fsd, only: icepack_cleanup_fsd
+      use icepack_fsd, only: icepack_fsd_mean_size
+      use icepack_fsd, only: icepack_fsd_strength_contribution
 
       use icepack_mechred, only: icepack_step_ridge
       use icepack_mechred, only: icepack_ice_strength
