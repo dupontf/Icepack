@@ -1075,7 +1075,7 @@
 !
 !  authors: F Dupont
 !
-      subroutine icepack_fsd_mean_size( ncat, nfsd, trcrn, aicen, mean_size )
+      subroutine icepack_fsd_mean_size( ncat, nfsd, trcrn, aicen, floe_rad_c, mean_size )
 
       integer (kind=int_kind), intent(in) :: &
          ncat       ,  & ! number of thickness categories
@@ -1086,6 +1086,10 @@
 
       real (kind=dbl_kind), dimension (:), intent(in) :: &
          aicen           ! ice concentration per ITD category
+
+      ! floe size distribution
+      real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
+         floe_rad_c         ! fsd size bin centre in m (radius)
 
       real (kind=dbl_kind), intent(out) :: &
          mean_size       ! mean floe size given FSD
@@ -1105,7 +1109,7 @@
 
       do n = 1, ncat
          afsd(:) = trcrn(nt_fsd:nt_fsd+nfsd-1,n)
-         meanrad = SUM( afsd * floe_area_c )
+         meanrad = SUM( afsd * floe_rad_c )
          mean_size = mean_size + meanrad * aicen(n)
       end do
 
