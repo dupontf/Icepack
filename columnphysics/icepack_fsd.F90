@@ -1130,15 +1130,15 @@
       subroutine icepack_fsd_strength_contribution( mean_size, vice, floestrengthfrac )
 
       real (kind=dbl_kind), intent(in) :: &
-         mean_size, &    ! mean floe size given AFSTD
-         vice            ! mean ice volume
+         mean_size, &    ! mean floe size given by AFSTD (m)
+         vice            ! mean ice volume, assumed to normalize by 1 (m)
 
       real (kind=dbl_kind), intent(out) :: &
          floestrengthfrac! strength diminishing contribution from FSD
 
       floestrengthfrac = c1 ! default is no dimnishing factor
       if (mean_size > 0.) &
-         floestrengthfrac = tanh( 0.01_dbl_kind * mean_size )
+         floestrengthfrac = tanh( 0.01_dbl_kind * mean_size * vice )
 
       end subroutine icepack_fsd_strength_contribution
 
