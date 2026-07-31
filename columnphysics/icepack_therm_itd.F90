@@ -1502,7 +1502,7 @@
       real (kind=dbl_kind) :: &
          latsurf_area, & ! fractional area of ice on sides of floes
          lead_area   , & ! fractional area of ice in lead region
-         G_radial    , & ! lateral melt rate (m/s)
+         G_radial    , & ! lateral growth rate (m/s)
          tot_latg    , & ! total fsd lateral growth in open water
          ai0mod          ! ai0new - tot_latg
 

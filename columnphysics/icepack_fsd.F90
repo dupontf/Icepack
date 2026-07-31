@@ -529,7 +529,7 @@
          d_an_latg          ! change in aicen occuring due to lateral growth
 
       real (kind=dbl_kind), intent(out) :: &
-         G_radial       , & ! lateral melt rate (m/s)
+         G_radial       , & ! lateral growth rate (m/s)
          tot_latg           ! total change in aice due to
                             ! lateral growth at the edges of floes
 
@@ -633,7 +633,7 @@
       real (kind=dbl_kind), intent(in) :: &
          dt         , & ! time step (s)
          ai0new     , & ! area of new ice added to cat 1
-         G_radial   , & ! lateral melt rate (m/s)
+         G_radial   , & ! lateral growth rate (m/s)
          wave_sig_ht    ! wave significant height (everywhere) (m)
 
       real (kind=dbl_kind), dimension(:), intent(in)  :: &
