@@ -1138,7 +1138,7 @@
 
       floestrengthfrac = c1 ! default is no dimnishing factor
       if (mean_size > 0.) &
-         floestrengthfrac = tanh( 0.01_dbl_kind * mean_size * vice )
+         floestrengthfrac = tanh( 0.04166_dbl_kind * mean_size * vice )
 
       end subroutine icepack_fsd_strength_contribution
 
